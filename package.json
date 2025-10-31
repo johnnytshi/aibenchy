@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node bin/aibenchy.js install",
     "test": "node src/test-parser.js",
-    "detect": "node src/detect-and-list.js"
+    "detect": "node src/detect-and-list.js",
+    "pytorch": "node src/list-pytorch.js"
   },
   "keywords": [
     "rocm",

@@ -3,8 +3,9 @@
 const path = require('path');
 const { Command } = require('commander');
 const { promptInstallation } = require(path.join(__dirname, '..', 'src', 'cli'));
+const { promptPyTorchInstallation } = require(path.join(__dirname, '..', 'src', 'pytorch-cli'));
 const { detectSystem } = require(path.join(__dirname, '..', 'src', 'system-detect'));
-const { parseRocmArtifacts, findCompatibleArtifacts } = require(path.join(__dirname, '..', 'src', 'rocm-parser'));
+const { displayConfig, loadConfig } = require(path.join(__dirname, '..', 'src', 'config'));
 
 const program = new Command();
 
@@ -19,6 +20,18 @@ program
   .action(async () => {
     try {
       await promptInstallation();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('pytorch')
+  .description('Install or update PyTorch with ROCm support')
+  .action(async () => {
+    try {
+      await promptPyTorchInstallation();
     } catch (error) {
       console.error('Error:', error.message);
       process.exit(1);
@@ -43,6 +56,19 @@ program
       } else {
         console.log('\n⚠️  AMD GPU not detected');
       }
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('config')
+  .description('Show current configuration')
+  .action(() => {
+    try {
+      const config = loadConfig();
+      displayConfig(config);
     } catch (error) {
       console.error('Error:', error.message);
       process.exit(1);
