@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+const path = require('path');
+const { Command } = require('commander');
+const { promptInstallation } = require(path.join(__dirname, '..', 'src', 'cli'));
+const { detectSystem } = require(path.join(__dirname, '..', 'src', 'system-detect'));
+const { parseRocmArtifacts, findCompatibleArtifacts } = require(path.join(__dirname, '..', 'src', 'rocm-parser'));
+
+const program = new Command();
+
+program
+  .name('aibenchy')
+  .description('CLI tool to automate installing ROCm and updating PyTorch')
+  .version('1.0.0');
+
+program
+  .command('install')
+  .description('Install ROCm with interactive prompts')
+  .action(async () => {
+    try {
+      await promptInstallation();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('detect')
+  .description('Detect system and show compatible ROCm versions')
+  .action(async () => {
+    try {
+      const systemInfo = detectSystem();
+      console.log('\n=== System Information ===\n');
+      console.log('Platform:', systemInfo.platform);
+      console.log('OS:', `${systemInfo.osInfo.type} ${systemInfo.osInfo.release}`);
+      console.log('Architecture:', systemInfo.osInfo.arch);
+      
+      if (systemInfo.detected) {
+        console.log('\n✅ AMD GPU Detected!');
+        console.log('GPU Architecture:', systemInfo.gpuArch);
+        console.log('Compatible ROCm GPU Families:', systemInfo.rocmGpuFamilies.join(', '));
+      } else {
+        console.log('\n⚠️  AMD GPU not detected');
+      }
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+program.parse();

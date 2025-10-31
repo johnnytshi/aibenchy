@@ -1,0 +1,28 @@
+{
+  "name": "rocm-pytorch-installer",
+  "version": "1.0.0",
+  "description": "CLI tool to automate installing ROCm and updating PyTorch",
+  "main": "src/index.js",
+  "bin": {
+    "aibenchy": "./bin/aibenchy.js"
+  },
+  "scripts": {
+    "start": "node bin/aibenchy.js install",
+    "test": "node src/test-parser.js",
+    "detect": "node src/detect-and-list.js"
+  },
+  "keywords": [
+    "rocm",
+    "pytorch",
+    "cli",
+    "installer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "commander": "^11.1.0",
+    "inquirer": "^8.2.7"
+  }
+}
