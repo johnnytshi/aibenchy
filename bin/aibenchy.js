@@ -6,6 +6,7 @@ const { promptInstallation } = require(path.join(__dirname, '..', 'src', 'cli'))
 const { promptPyTorchInstallation } = require(path.join(__dirname, '..', 'src', 'pytorch-cli'));
 const { detectSystem } = require(path.join(__dirname, '..', 'src', 'system-detect'));
 const { displayConfig, loadConfig } = require(path.join(__dirname, '..', 'src', 'config'));
+const { promptBenchmark } = require(path.join(__dirname, '..', 'src', 'benchmark'));
 
 const program = new Command();
 
@@ -69,6 +70,18 @@ program
     try {
       const config = loadConfig();
       displayConfig(config);
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('bench')
+  .description('Run performance benchmarks')
+  .action(async () => {
+    try {
+      await promptBenchmark();
     } catch (error) {
       console.error('Error:', error.message);
       process.exit(1);

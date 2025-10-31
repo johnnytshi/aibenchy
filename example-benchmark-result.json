@@ -1,0 +1,63 @@
+{
+  "benchmarkType": "full",
+  "metadata": {
+    "timestamp": "2025-10-30T12:34:56.789Z",
+    "system": {
+      "os": "Linux",
+      "platform": "linux",
+      "release": "6.17.5-2-cachyos",
+      "arch": "x64",
+      "hostname": "your-hostname",
+      "cpus": "AMD Ryzen 9 5900X",
+      "totalMemory": "64.00 GB"
+    },
+    "gpu": {
+      "architecture": "gfx1151",
+      "deviceId": "1002:1586"
+    },
+    "rocm": {
+      "version": "7.10.0",
+      "buildTag": "a20251029",
+      "fullVersion": "7.10.0a20251029"
+    },
+    "python": {
+      "version": "3.13"
+    },
+    "packages": {
+      "torch": "2.8.0a0+git9c88c8d",
+      "torchvision": "0.21.0a0+git1b39c23",
+      "torchaudio": "2.5.0a0+git91db6f7",
+      "flash-attn": "2.8.3"
+    }
+  },
+  "output": "Raw benchmark output text...",
+  "rawOutput": "Raw benchmark output text...",
+  "parsed": {
+    "matrixMultiplication": [
+      {
+        "size": 1024,
+        "timeMs": 12.34,
+        "gflops": 174.23
+      },
+      {
+        "size": 2048,
+        "timeMs": 45.67,
+        "gflops": 376.89
+      },
+      {
+        "size": 4096,
+        "timeMs": 234.56,
+        "gflops": 584.12
+      },
+      {
+        "size": 8192,
+        "timeMs": 1234.56,
+        "gflops": 889.45
+      }
+    ],
+    "flashAttention": {
+      "timeMs": 89.12,
+      "tokensPerSec": 92345.67
+    }
+  }
+}
