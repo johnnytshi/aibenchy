@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIBenchy Benchmark Viewer</title>
+    <link rel="stylesheet" href="benchmark-viewer.css">
+</head><body>
+    <h1>AIBenchy Benchmark Viewer</h1>
+    <div class="container">
+        <div class="controls">
+            <div class="filters">
+                <label for="gemmShapeFilter">GEMM Shape:</label>
+                <select id="gemmShapeFilter"></select>
+
+            </div>
+        </div>
+        <div id="results" class="results-container"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="benchmark-viewer.js"></script>
+</body>
+</html>

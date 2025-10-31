@@ -10,9 +10,10 @@ This document summarizes what’s implemented in the repo, and lists the key fun
 - PyPI helper for Flash Attention versions
 - Benchmark runner and results parser/saver
 - Utilities to list/nightly builds and reprocess old benchmark results
+- Web-based benchmark result viewer.
 
 Top-level CLI: `bin/aibenchy.js`
-- Commands: `aibenchy rocm`, `aibenchy python`, `aibenchy detect`, `aibenchy config`, `aibenchy bench`
+- Commands: `aibenchy rocm`, `aibenchy python`, `aibenchy detect`, `aibenchy config`, `aibenchy bench`, `aibenchy view_benchmark`
 
 ## Data and output locations
 
@@ -116,7 +117,7 @@ Top-level CLI: `bin/aibenchy.js`
 - `parsePackageVersions(gpuArch, packageName)` → lists wheels for a package.
 - `parsePyTorchPackages(gpuArch)` → aggregates torch/vision/audio versions for arch.
 - `parsePackageName(filename)` → parses wheel filename metadata.
-- `compareVersions(a, b)` → semver-ish compare.
+- `compareVersions(a, b)` → version comparator.
 - `groupPackagesByName(packages)` → map of name → sorted versions.
 - `getLatestVersions(packages)` → latest per package.
 - `filterByPythonVersion(packages, py)`; `filterByPlatform(packages, platform)`.
@@ -172,10 +173,12 @@ Top-level CLI: `bin/aibenchy.js`
 - Output: updates files in `~/.config/aibenchy/benchmark-results/` in-place.
 
 ### `scripts/serve-benchmark-viewer.js`
-- Note: this file currently exists but is empty in the repo state. If implemented, it would typically serve a static viewer and a JSON API endpoint pointing at the results directory.
+- Serves a static web page to visualize benchmark results.
+- Provides an API endpoint `/api/results` to fetch all benchmark data.
 
 ### Viewer assets
-- `benchmark-viewer.html` exists in the repo; current state may be a manual file-uploader or a server-backed viewer depending on revisions. It expects benchmark JSON files shaped like those written by `saveResults`.
+- The benchmark viewer is located in the `frontend/` directory.
+- It expects benchmark JSON files shaped like those written by `saveResults`.
 
 ---
 
@@ -207,6 +210,7 @@ aibenchy rocm        # guided ROCm installer
 aibenchy python      # guided PyTorch + Flash-Attn installer
 aibenchy bench       # run benchmarks and save results
 aibenchy config      # print current config
+aibenchy view_benchmark # view benchmark results
 ```
 
 3) Where outputs go

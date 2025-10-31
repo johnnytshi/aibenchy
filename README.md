@@ -24,6 +24,9 @@ aibenchy python
 
 # 5) Run benchmarks and save results
 aibenchy bench
+
+# 6) View benchmark results
+aibenchy view_benchmark
 ```
 
 That’s it. The tool guides you with friendly prompts and sensible defaults.
@@ -35,6 +38,7 @@ That’s it. The tool guides you with friendly prompts and sensible defaults.
 - Set up a Python project with AMD ROCm nightly wheels (torch/vision/audio)
 - Optional Flash Attention install
 - Simple performance benchmarks that save JSON snapshots
+- A web-based viewer to visualize and compare benchmark results.
 
 ## Where things go
 
@@ -59,6 +63,7 @@ Tip: If you use fish shell, the tool prints fish-friendly env exports as well.
 - `aibenchy python` — Guided PyTorch/Flash-Attn install for AMD ROCm nightlies
 - `aibenchy bench` — Run basic GPU checks and small benchmarks; saves JSON
 - `aibenchy config` — Print current config
+- `aibenchy view_benchmark` — Starts a web server to view benchmark results.
 
 ## Friendly notes
 

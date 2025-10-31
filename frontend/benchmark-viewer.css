@@ -1,0 +1,52 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+h1 {
+    text-align: center;
+    padding: 1rem;
+    background-color: #333;
+    color: white;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 5px;
+}
+
+.filters {
+    display: flex;
+    align-items: center;
+}
+
+.filters label {
+    margin-left: 1rem;
+}
+
+.results-container {
+    display: block;
+}
+
+.result-card {
+    background-color: white;
+    border-radius: 5px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.result-card h2 {
+    margin-top: 0;
+}

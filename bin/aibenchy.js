@@ -2,6 +2,7 @@
 
 const path = require('path');
 const { Command } = require('commander');
+const { spawn } = require('child_process');
 const { promptInstallation } = require(path.join(__dirname, '..', 'src', 'cli'));
 const { promptPyTorchInstallation } = require(path.join(__dirname, '..', 'src', 'pytorch-cli'));
 const { detectSystem } = require(path.join(__dirname, '..', 'src', 'system-detect'));
@@ -86,6 +87,23 @@ program
       console.error('Error:', error.message);
       process.exit(1);
     }
+  });
+
+program
+  .command('view_benchmark')
+  .description('Starts a web server to view benchmark results')
+  .action(() => {
+    const serverPath = path.join(__dirname, '..', 'scripts', 'serve-benchmark-viewer.js');
+    const child = spawn('node', [serverPath], { stdio: 'inherit' });
+
+    child.on('error', (err) => {
+      console.error('Failed to start benchmark viewer server:', err);
+    });
+
+    child.on('exit', (code, signal) => {
+      if (code) console.log(`Benchmark viewer server exited with code ${code}`);
+      if (signal) console.log(`Benchmark viewer server exited with signal ${signal}`);
+    });
   });
 
 program.parse();
