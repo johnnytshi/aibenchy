@@ -3,8 +3,8 @@
 One CLI to set up AMD ROCm + PyTorch nightlies and run quick benchmarks. Fun, fast, and focused on AMD GPUs.
 
 Important: AMD only (for now)
-- You need an AMD GPU that supports ROCm (RDNA/CDNA families).
-- Linux is the target platform right now. NVIDIA/CPU-only support is not included yet.
+- You need an AMD GPU. (No NVIDIA support, I don't think I can distrubute CUDA or cuDNN since its close sourced)
+- Linux is the target platform right now.
 
 ## TL;DR
 
