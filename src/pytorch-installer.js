@@ -58,8 +58,9 @@ function initializeUvProject(projectPath, pythonVersion) {
  * @param {string} projectPath - Path to project directory
  * @param {string} gpuArch - GPU architecture (e.g., 'gfx1151')
  * @param {Array<Object>} packages - Array of package objects with {name, version}
+ * @param {Object} options - Installation options
  */
-async function installPyTorchPackages(projectPath, gpuArch, packages) {
+async function installPyTorchPackages(projectPath, gpuArch, packages, options = {}) {
   console.log('\n=== Installing PyTorch Packages ===\n');
   
   process.chdir(projectPath);
@@ -84,7 +85,29 @@ async function installPyTorchPackages(projectPath, gpuArch, packages) {
     const cmd = `uv pip install --index-url ${indexUrl} --prerelease allow --upgrade ${packageSpecs.join(' ')}`;
     console.log(`Running: ${cmd}\n`);
     execSync(cmd, { stdio: 'inherit' });
-    console.log('\n✅ Packages installed successfully');
+    console.log('\n✅ PyTorch packages installed successfully');
+    
+    // Install flash-attn if requested
+    if (options.installFlashAttn) {
+      console.log('\n=== Installing Flash Attention ===\n');
+      try {
+        const version = options.flashAttnVersion && options.flashAttnVersion !== 'latest' 
+          ? `==${options.flashAttnVersion}` 
+          : '';
+        const flashAttnCmd = `uv pip install flash-attn${version} --no-build-isolation`;
+        console.log(`Running: ${flashAttnCmd}\n`);
+        execSync(flashAttnCmd, { stdio: 'inherit' });
+        console.log('\n✅ Flash Attention installed successfully');
+      } catch (error) {
+        console.error('\n⚠️  Flash Attention installation failed:', error.message);
+        console.error('You can try installing it manually later with:');
+        const version = options.flashAttnVersion && options.flashAttnVersion !== 'latest' 
+          ? `==${options.flashAttnVersion}` 
+          : '';
+        console.error(`  uv pip install flash-attn${version} --no-build-isolation`);
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('\n❌ Installation failed:', error.message);
@@ -152,6 +175,48 @@ function getInstalledPackages(projectPath) {
   }
 }
 
+/**
+ * Setup environment variables for ROCm and Flash Attention
+ * @param {string} projectPath - Path to project directory
+ * @param {Object} options - Environment options
+ */
+function setupEnvironmentVariables(projectPath, options = {}) {
+  console.log('\n=== Environment Variables Setup ===\n');
+  
+  const envVars = [
+    '# ROCm Environment Variables',
+    'export ROCM_PATH="/opt/rocm"',
+    'export PATH="$ROCM_PATH/bin:$PATH"',
+    'export LD_LIBRARY_PATH="$ROCM_PATH/lib:$LD_LIBRARY_PATH"',
+  ];
+  
+  if (options.hasFlashAttn) {
+    envVars.push('');
+    envVars.push('# Flash Attention for AMD GPUs');
+    envVars.push('export FLASH_ATTENTION_TRITON_AMD_ENABLE=1');
+    envVars.push('export HSA_OVERRIDE_GFX_VERSION="11.0.0"  # Adjust based on your GPU');
+  }
+  
+  // Create .env file in project directory
+  const envFilePath = path.join(projectPath, '.env');
+  const envContent = envVars.join('\n') + '\n';
+  
+  try {
+    fs.writeFileSync(envFilePath, envContent);
+    console.log(`✅ Environment variables saved to: ${envFilePath}\n`);
+    console.log('Add these to your shell configuration (~/.bashrc or ~/.config/fish/config.fish):\n');
+    envVars.forEach(line => console.log(`  ${line}`));
+    console.log('\nOr source the .env file:');
+    console.log(`  source ${envFilePath}  # bash/zsh`);
+    console.log(`  source ${envFilePath}  # fish\n`);
+  } catch (error) {
+    console.error('⚠️  Could not write .env file:', error.message);
+    console.log('\nManually add these to your shell configuration:\n');
+    envVars.forEach(line => console.log(`  ${line}`));
+    console.log('');
+  }
+}
+
 module.exports = {
   isUvInstalled,
   getPythonVersion,
@@ -159,5 +224,6 @@ module.exports = {
   installPyTorchPackages,
   updatePyTorchPackages,
   isProjectInitialized,
-  getInstalledPackages
+  getInstalledPackages,
+  setupEnvironmentVariables
 };

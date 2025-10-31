@@ -27,7 +27,7 @@ program
   });
 
 program
-  .command('pytorch')
+  .command('python')
   .description('Install or update PyTorch with ROCm support')
   .action(async () => {
     try {

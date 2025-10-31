@@ -12,13 +12,17 @@ const {
   groupPackagesByName
 } = require('./pytorch-parser');
 const {
+  fetchPyPiVersions
+} = require('./pypi-parser');
+const {
   isUvInstalled,
   getPythonVersion,
   initializeUvProject,
   installPyTorchPackages,
   updatePyTorchPackages,
   isProjectInitialized,
-  getInstalledPackages
+  getInstalledPackages,
+  setupEnvironmentVariables
 } = require('./pytorch-installer');
 const {
   loadConfig,
@@ -291,7 +295,58 @@ async function promptPyTorchInstallation() {
     }
   }
   
-  // Step 5: Confirm installation
+  // Step 5: Flash Attention option
+  const { installFlashAttn } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'installFlashAttn',
+      message: 'Install Flash Attention? (Recommended for faster attention operations)',
+      default: true
+    }
+  ]);
+  
+  let flashAttnVersion = null;
+  if (installFlashAttn) {
+    console.log('\nFetching flash-attn versions...');
+    const flashAttnVersions = await fetchPyPiVersions('flash-attn');
+    
+    if (flashAttnVersions.length > 0) {
+      const versionChoices = flashAttnVersions.slice(0, 10).map(v => ({
+        name: v,
+        value: v
+      }));
+      
+      if (flashAttnVersions.length > 10) {
+        versionChoices.push({
+          name: `... and ${flashAttnVersions.length - 10} more versions`,
+          value: null
+        });
+      }
+      
+      versionChoices.unshift({
+        name: 'Latest (recommended)',
+        value: 'latest'
+      });
+      
+      const { selectedFlashAttnVersion } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'selectedFlashAttnVersion',
+          message: 'Select flash-attn version:',
+          choices: versionChoices,
+          default: 'latest',
+          loop: false
+        }
+      ]);
+      
+      flashAttnVersion = selectedFlashAttnVersion;
+    } else {
+      console.log('⚠️  Could not fetch flash-attn versions, will use latest');
+      flashAttnVersion = 'latest';
+    }
+  }
+  
+  // Step 6: Confirm installation
   console.log('\n=== Installation Summary ===\n');
   console.log(`Project Path: ${config.projectPath}`);
   console.log(`Python Version: ${pythonVersion}`);
@@ -303,6 +358,9 @@ async function promptPyTorchInstallation() {
   packagesToInstall.forEach(pkg => {
     console.log(`  • ${pkg.name} ${pkg.version}`);
   });
+  if (installFlashAttn) {
+    console.log(`  • flash-attn ${flashAttnVersion === 'latest' ? '(latest)' : flashAttnVersion}`);
+  }
   
   const { confirmInstall } = await inquirer.prompt([
     {
@@ -318,17 +376,18 @@ async function promptPyTorchInstallation() {
     process.exit(0);
   }
   
-  // Step 6: Initialize project if needed
+  // Step 7: Initialize project if needed
   if (!projectExists) {
     console.log('\n=== Step 5: Initializing Project ===');
     initializeUvProject(config.projectPath, pythonVersion);
   }
   
-  // Step 7: Install packages
+  // Step 8: Install packages
   const success = await installPyTorchPackages(
     config.projectPath,
     config.gpuArch,
-    packagesToInstall
+    packagesToInstall,
+    { installFlashAttn, flashAttnVersion }
   );
   
   if (!success) {
@@ -336,18 +395,26 @@ async function promptPyTorchInstallation() {
     process.exit(1);
   }
   
-  // Step 8: Update config
+  // Step 9: Setup environment variables
+  setupEnvironmentVariables(config.projectPath, { hasFlashAttn: installFlashAttn });
+  
+  // Step 10: Update config
   packagesToInstall.forEach(pkg => {
     config.installedPackages[pkg.name] = pkg.version;
   });
+  
+  if (installFlashAttn) {
+    config.installedPackages['flash-attn'] = flashAttnVersion;
+  }
   
   saveConfig(config);
   
   console.log('\n✨ Installation complete! ✨\n');
   console.log('Next steps:');
   console.log(`  1. cd ${config.projectPath}`);
-  console.log(`  2. uv run python`);
-  console.log(`  3. import torch; print(torch.cuda.is_available())\n`);
+  console.log(`  2. Source environment variables: source .env`);
+  console.log(`  3. uv run python`);
+  console.log(`  4. import torch; print(torch.cuda.is_available())\n`);
 }
 
 module.exports = { promptPyTorchInstallation };

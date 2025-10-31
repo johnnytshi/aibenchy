@@ -19,7 +19,8 @@ function getDefaultConfig() {
     installedPackages: {
       torch: null,
       torchvision: null,
-      torchaudio: null
+      torchaudio: null,
+      'flash-attn': null
     }
   };
 }
@@ -92,6 +93,7 @@ function displayConfig(config) {
   console.log(`  torch: ${pkgs.torch || 'Not installed'}`);
   console.log(`  torchvision: ${pkgs.torchvision || 'Not installed'}`);
   console.log(`  torchaudio: ${pkgs.torchaudio || 'Not installed'}`);
+  console.log(`  flash-attn: ${pkgs['flash-attn'] || 'Not installed'}`);
   
   if (config.lastUpdated) {
     console.log(`\nLast Updated: ${new Date(config.lastUpdated).toLocaleString()}`);
