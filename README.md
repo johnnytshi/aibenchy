@@ -1,162 +1,70 @@
-# AIBenchy - ROCm & PyTorch Installer CLI
+# AIBenchy 🚀
 
-A command-line tool to automate installing ROCm and updating PyTorch on your system with interactive prompts.
+One CLI to set up AMD ROCm + PyTorch nightlies and run quick benchmarks. Fun, fast, and focused on AMD GPUs.
 
-## Features
+Important: AMD only (for now)
+- You need an AMD GPU that supports ROCm (RDNA/CDNA families).
+- Linux is the target platform right now. NVIDIA/CPU-only support is not included yet.
 
-- 🤖 **Auto-detect** your AMD GPU and system platform
-- 🔍 **Browse** 1,240+ ROCm nightly builds from official S3 bucket
-- 🎯 **Filter** compatible builds for your specific GPU architecture
-- 📦 **Download** and install ROCm packages to `/opt/rocm`
-- 💬 **Interactive prompts** guide you through the entire process
-- 🔥 Update PyTorch with ROCm support (coming soon)
-
-## Quick Start
+## TL;DR
 
 ```bash
-# Install dependencies
+# 1) Install and link the CLI
 npm install
-
-# Link the CLI tool globally
 npm link
 
-# Run the installer
-aibenchy install
-```
-
-## ROCm Parser
-
-The ROCm parser fetches and parses all available ROCm SDK nightly tarballs from the official S3 bucket.
-
-### Test the Parser
-
-```bash
-npm test
-```
-
-This will:
-1. Fetch all ROCm artifacts from the S3 index
-2. Parse the filenames and extract metadata
-3. Display available platforms, GPU types, variants, and versions
-4. Show examples of filtered results
-
-### Artifact Information
-
-Each parsed artifact contains:
-- `filename`: Full filename of the tarball
-- `url`: Download URL
-- `platform`: linux or windows
-- `gpu`: GPU architecture (gfx110X, gfx90X, gfx120X, gfx94X, gfx950, etc.)
-- `variant`: Package variant (all, dcgpu, dgpu)
-- `rocmVersion`: ROCm version number (e.g., 7.10.0)
-- `buildTag`: Build tag (e.g., a20251030 for alpha, rc20251030 for release candidate)
-- `buildDate`: Parsed build date (YYYY-MM-DD)
-- `fullVersion`: Complete version string
-
-### Filter Options
-
-```javascript
-const filtered = filterArtifacts(artifacts, {
-  platform: 'linux',        // 'linux' or 'windows'
-  gpu: 'gfx110X',          // Specific GPU architecture
-  variant: 'all',          // 'all', 'dcgpu', or 'dgpu'
-  rocmVersion: '7.10.0',   // Specific ROCm version
-  latest: true             // Get only the latest build for each config
-});
-```
-
-## Usage
-
-### Install ROCm
-
-Run the interactive installer:
-
-```bash
-aibenchy install
-```
-
-**[📖 See detailed installation walkthrough](INSTALLATION.md)**
-
-This will:
-1. Auto-detect your system platform and AMD GPU
-2. Fetch all available ROCm builds from the official repository
-3. Show you compatible versions for your GPU
-4. Let you select the version, variant, and build date
-5. Download the selected ROCm package
-6. Install it to `/opt/rocm` (requires sudo)
-7. Provide environment setup instructions
-8. Optionally verify the installation
-
-### Detect Your System
-
-Check what GPU and platform you have:
-
-```bash
+# 2) Detect your system
 aibenchy detect
+
+# 3) Install ROCm (interactive, uses sudo for /opt/rocm)
+aibenchy rocm
+
+# 4) Install PyTorch for AMD ROCm (interactive)
+aibenchy python
+
+# 5) Run benchmarks and save results
+aibenchy bench
 ```
 
-### Get Help
+That’s it. The tool guides you with friendly prompts and sensible defaults.
 
-```bash
-aibenchy --help
-aibenchy install --help
-```
+## What you get
 
-## Installation Workflow
+- Auto-detect AMD GPU + compatible ROCm families
+- Pick from ROCm nightly builds and install to `/opt/rocm`
+- Set up a Python project with AMD ROCm nightly wheels (torch/vision/audio)
+- Optional Flash Attention install
+- Simple performance benchmarks that save JSON snapshots
 
-Here's what happens when you run `aibenchy install`:
+## Where things go
 
-```
-🚀 AIBenchy - ROCm Installation Tool
+- ROCm install: `/opt/rocm` (writes `.info/build-info.json`)
+- Download cache: `~/.cache/aibenchy/`
+- CLI config: `~/.config/aibenchy/config.json`
+- Benchmark results: `~/.config/aibenchy/benchmark-results/*.json`
+- Project env file: `<your-project>/.env`
 
-=== Step 1: Detecting Your System ===
-Platform: linux
-Architecture: x64
-GPU: gfx1151 ✅
+## Requirements
 
-=== Step 2: Fetching Available ROCm Builds ===
-Found 164 compatible builds
+- AMD GPU with ROCm support (RDNA/CDNA, e.g., gfx10xx/gfx11xx/gfx9x)
+- Linux, with sudo access for installing to `/opt/rocm`
+- Python tooling: we use `uv` inside the Python flow
 
-=== Step 3: Select ROCm Version ===
-? Which ROCm version would you like to install? (Use arrow keys)
-❯ ROCm 7.10.0
-  ROCm 7.9.0
-  ROCm 7.0.0
-  ROCm 6.5.0
-  ROCm 6.4.0
+Tip: If you use fish shell, the tool prints fish-friendly env exports as well.
 
-=== Installation Summary ===
-ROCm Version: 7.9.0
-GPU: gfx1151
-Build Date: 2025-10-08
-Install Location: /opt/rocm
+## Commands cheat sheet
 
-? Proceed with installation? (Y/n)
-```
+- `aibenchy detect` — Show platform, GPU arch, and ROCm compatibility
+- `aibenchy rocm` — Guided ROCm install (download → backup → install → verify)
+- `aibenchy python` — Guided PyTorch/Flash-Attn install for AMD ROCm nightlies
+- `aibenchy bench` — Run basic GPU checks and small benchmarks; saves JSON
+- `aibenchy config` — Print current config
 
-## Supported Systems
+## Friendly notes
 
-### Platforms
-- ✅ Linux
-- ✅ Windows (download only, manual installation required)
-
-### Supported AMD GPU Architectures
-- **RDNA 3** (RX 7000 series): gfx1100, gfx1101, gfx1102, gfx1103
-- **RDNA 2** (RX 6000 series): gfx1030, gfx1031, gfx1032
-- **RDNA 1** (RX 5000 series): gfx1010, gfx1011, gfx1012
-- **Vega** (Radeon VII, RX Vega): gfx906, gfx908
-- **CDNA** (Instinct MI series): gfx90a, gfx940, gfx941, gfx942, gfx950
-- **APU/Mobile**: gfx1150, gfx1151
-
-## Next Steps
-
-- [x] CLI interface for listing and selecting ROCm builds
-- [x] Download functionality
-- [x] Installation scripts for ROCm
-- [x] System detection (auto-detect GPU)
-- [ ] PyTorch installation with ROCm support
-- [ ] Update existing PyTorch to use ROCm
-- [ ] Verify GPU acceleration in PyTorch
+- The installer backs up any existing `/opt/rocm` to a timestamped `.backup` folder before installing.
+- Benchmarks write results you can diff over time and post-process however you like.
+- NVIDIA and CPU-only support are on the wishlist. If you need them, open an issue—PRs welcome!
 
 ## License
 

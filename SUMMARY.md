@@ -1,140 +1,220 @@
-# 🎉 AIBenchy CLI - Complete!
+# AIBenchy – Project Summary and Function Reference
 
-Your ROCm installer is ready to use!
+This document summarizes what’s implemented in the repo, and lists the key functions, what they do, and where any outputs are written.
 
-## ✅ What's Been Built
+## Overview
 
-### 1. **System Detection** (`src/system-detect.js`)
-- Auto-detects Linux/Windows platform
-- Identifies AMD GPU architecture using `rocminfo` and `lspci`
-- Maps GPU models to ROCm package families
-- Supported GPUs: RDNA 1/2/3, Vega, CDNA (Instinct)
+- ROCm installer and artifact discovery (interactive CLI)
+- PyTorch installer for AMD ROCm nightlies (interactive CLI)
+- System/GPU detection and compatibility filtering
+- PyPI helper for Flash Attention versions
+- Benchmark runner and results parser/saver
+- Utilities to list/nightly builds and reprocess old benchmark results
 
-### 2. **ROCm Parser** (`src/rocm-parser.js`)
-- Fetches 1,240+ ROCm nightly builds from S3
-- Parses filenames to extract metadata
-- Filters by platform, GPU, variant, version
-- Finds latest builds for each configuration
+Top-level CLI: `bin/aibenchy.js`
+- Commands: `aibenchy rocm`, `aibenchy python`, `aibenchy detect`, `aibenchy config`, `aibenchy bench`
 
-### 3. **Installer** (`src/installer.js`)
-- Downloads files with progress tracking
-- Extracts tar.gz archives
-- Installs to `/opt/rocm` (with sudo)
-- Backs up existing installations
-- Sets up environment variables
-- Verifies installation with `rocminfo`
+## Data and output locations
 
-### 4. **Interactive CLI** (`src/cli.js` + `bin/aibenchy.js`)
-- Guided installation workflow
-- Select ROCm version, variant, and build
-- Confirmation prompts before actions
-- Progress indicators
-- Error handling
+- ROCm install path: `/opt/rocm` (writes `.info/build-info.json` on install)
+- Downloads cache: `~/.cache/aibenchy/`
+- Config file: `~/.config/aibenchy/config.json`
+- Benchmark results: `~/.config/aibenchy/benchmark-results/*.json`
+- Project env file (PyTorch): `<your project>/.env`
 
-## 🚀 How to Use
+---
 
-### Install the CLI
+## CLI entry point
+
+### `bin/aibenchy.js`
+- Wires subcommands to their respective modules.
+- Exposes: `rocm`, `python`, `detect`, `config`, `bench`.
+- Output: console output per command; most side effects are delegated to modules below.
+
+---
+
+## ROCm installation flow
+
+### `src/cli.js`
+- `checkCurrentRocm()`
+   - Detects existing ROCm under `/opt/rocm` and reads version/build metadata.
+   - Output: returns info object; prints details if invoked via `promptInstallation()`.
+- `promptInstallation()`
+   - Full interactive ROCm install workflow: detect system → fetch artifacts → select version/variant/build → download → install → setup → verify.
+   - Output: console logs; installs to `/opt/rocm`; may back up existing install to `/opt/rocm.backup.<timestamp>`.
+- `getFileSize(url)`
+   - Estimates the tarball size via HTTP HEAD.
+   - Output: returns MB estimate (string).
+
+### `src/installer.js`
+- `downloadFile(url, destPath)`
+   - Streams a file to disk with progress.
+   - Output: writes file to `destPath`.
+- `extractTarGz(tarPath, destDir)`
+   - Extracts tar.gz into a directory.
+   - Output: files in `destDir`.
+- `requiresSudo(dir)`
+   - Checks if write access requires sudo.
+   - Output: boolean.
+- `installRocm(tarPath, installDir = '/opt/rocm', buildInfo)`
+   - Extracts, backs up existing `/opt/rocm`, installs new files, sets permissions, and writes `.info/build-info.json`.
+   - Output: files under `installDir`; metadata in `installDir/.info/build-info.json`.
+- `setupEnvironment(installDir)`
+   - Prints environment export lines for bash/fish.
+   - Output: console only (user applies).
+- `verifyInstallation(installDir)`
+   - Runs `rocminfo` to validate.
+   - Output: console logs; return boolean.
+
+### `src/rocm-parser.js`
+- `parseRocmArtifacts()`
+   - Fetches ROCm nightly index and parses available tarballs.
+   - Output: returns array of artifact objects.
+- `parseArtifactInfo(url, filename)`
+   - Parses filename into fields: platform/gpu/variant/rocmVersion/buildTag/buildDate.
+   - Output: returns normalized artifact object.
+- `filterArtifacts(artifacts, filters)`
+   - Filters by platform/gpu/variant/rocmVersion and can pick latest per group.
+   - Output: filtered array.
+- `getUniqueValues(artifacts, field)`
+   - Distinct values for a field.
+   - Output: string[]
+
+### `src/system-detect.js`
+- `detectPlatform()` → `'linux' | 'windows'`.
+- `detectGpuArch()` → detects AMD GPU arch via `rocminfo`/`lspci`/name heuristics.
+- `mapDeviceIdToArch(deviceId)` → maps PCI IDs to gfx arch.
+- `mapArchToRocmGpu(arch)` → maps `gfxXXXX` to ROCm GPU families.
+- `detectSystem()` → aggregates platform, arch, ROCm families, OS info.
+- `findCompatibleArtifacts(artifacts, systemInfo, options)` → filters artifacts for the machine.
+   - Output: return values only; console warnings on missing GPU.
+
+---
+
+## PyTorch installation flow
+
+### `src/pytorch-cli.js`
+- `checkCurrentRocm()`
+   - Reads `/opt/rocm/.info/build-info.json` or `.info/version` for display.
+   - Output: version string or null.
+- `promptPyTorchInstallation()`
+   - Full interactive flow to select Python version and PyTorch nightly wheels for the detected GPU; initializes a `uv` project if needed; installs torch/vision/audio and optional Flash Attention; writes `.env`.
+   - Output: packages installed into the uv environment at your chosen project path; writes `<project>/.env` and updates `~/.config/aibenchy/config.json`.
+
+### `src/pytorch-installer.js`
+- `isUvInstalled()` → checks for `uv`.
+- `getPythonVersion()` → system Python major.minor.
+- `initializeUvProject(projectPath, pythonVersion)` → runs `uv init`.
+- `installPyTorchPackages(projectPath, gpuArch, packages, options)` → installs packages from AMD ROCm index; optional Flash Attention.
+   - Output: packages in uv environment under `projectPath`.
+- `updatePyTorchPackages(projectPath, gpuArch, packages)` → updates specific packages to chosen versions.
+- `isProjectInitialized(projectPath)` → `pyproject.toml` exists.
+- `getInstalledPackages(projectPath)` → returns `{ name: version }` map via `uv pip list`.
+- `setupEnvironmentVariables(projectPath, options)` → writes `<projectPath>/.env` with ROCm and optional Flash Attention flags.
+
+### `src/pytorch-parser.js`
+- `parsePackageVersions(gpuArch, packageName)` → lists wheels for a package.
+- `parsePyTorchPackages(gpuArch)` → aggregates torch/vision/audio versions for arch.
+- `parsePackageName(filename)` → parses wheel filename metadata.
+- `compareVersions(a, b)` → semver-ish compare.
+- `groupPackagesByName(packages)` → map of name → sorted versions.
+- `getLatestVersions(packages)` → latest per package.
+- `filterByPythonVersion(packages, py)`; `filterByPlatform(packages, platform)`.
+- `getAvailablePythonVersions(packages)` → distinct supported Python versions.
+   - Output: return values only.
+
+### `src/pypi-parser.js`
+- `fetchPyPiVersions(packageName)` → versions from PyPI (e.g., `flash-attn`).
+- `compareVersions(a, b)` → version comparator.
+- `fetchPackageInfo(packageName)` → PyPI package metadata.
+   - Output: return values only.
+
+### `src/list-pytorch.js`
+- `listPyTorchVersions()`
+   - Prints available PyTorch nightly versions for the detected GPU and platform, grouped by Python versions, with install guidance.
+   - Output: console only.
+
+### `src/config.js`
+- `getDefaultConfig()` → default config structure.
+- `loadConfig()` / `saveConfig(config)` / `updateConfig(updates)` / `displayConfig(config)` / `resetConfig()`.
+   - Output: `save/update/reset` write `~/.config/aibenchy/config.json`; `display` prints.
+
+---
+
+## Benchmarking
+
+### `src/benchmark.js`
+- `runBenchmark(projectPath, benchmarkScript)`
+   - Writes a temp Python file, runs it via `uv run python`, captures output.
+   - Output: returns `{ success, output }`; temp file is deleted.
+- `listResults()`
+   - Interactive selector to view previously saved results.
+   - Output: console display; reads from `~/.config/aibenchy/benchmark-results/`.
+- `promptBenchmark()`
+   - Interactive runner for: basic torch env check, matrix-mult benchmark (BF16), Flash Attention benchmark, or full suite. Saves structured results.
+   - Output: writes JSON result files to `~/.config/aibenchy/benchmark-results/`.
+- `collectSystemMetadata()`
+   - Captures OS, CPU, GPU, ROCm build info and installed package versions from config.
+   - Output: metadata object embedded in result JSON.
+- `saveResults(benchmarkType, output, metadata)`
+   - Serializes benchmark output with parsed sections to a timestamped JSON file.
+   - Output: `~/.config/aibenchy/benchmark-results/<type>_<timestamp>.json`.
+- `parseMatrixResults(output)`
+   - Parses bf16 GEMM logs into rows with m/n/k, timeMs, TOPS or GFLOPS.
+   - Output: `{ matrixMultiplication: [...] }`.
+- `parseFlashResults(output)`
+   - Parses Flash Attention time and tokens/sec.
+   - Output: `{ flashAttention: { timeMs, tokensPerSec } }`.
+
+### `scripts/reprocess-results.js`
+- Script to re-parse older result files and add missing `m/n/k` fields.
+- Functions: `parseMatrixResults()`, `parseFlashResults()` (same intent as in `src/benchmark.js`).
+- Output: updates files in `~/.config/aibenchy/benchmark-results/` in-place.
+
+### `scripts/serve-benchmark-viewer.js`
+- Note: this file currently exists but is empty in the repo state. If implemented, it would typically serve a static viewer and a JSON API endpoint pointing at the results directory.
+
+### Viewer assets
+- `benchmark-viewer.html` exists in the repo; current state may be a manual file-uploader or a server-backed viewer depending on revisions. It expects benchmark JSON files shaped like those written by `saveResults`.
+
+---
+
+## Utilities and helpers
+
+### `src/detect-and-list.js`
+- `main()` (top-level) – combines detection and listing of compatible ROCm builds with recommendations.
+- Output: console only.
+
+### `src/debug-html.js`
+- `debug()` – fetches the ROCm nightly index HTML and prints debug info for parsing.
+- Output: console only.
+
+---
+
+## Try it
+
+1) Install and link the CLI
 ```bash
 cd /home/johnny/playground/aibenchy
 npm install
 npm link
 ```
 
-### Run the Installer
+2) Commands
 ```bash
-aibenchy install
+aibenchy detect      # show platform/GPU and compatible ROCm families
+aibenchy rocm        # guided ROCm installer
+aibenchy python      # guided PyTorch + Flash-Attn installer
+aibenchy bench       # run benchmarks and save results
+aibenchy config      # print current config
 ```
 
-### Detect Your System
-```bash
-aibenchy detect
-```
+3) Where outputs go
+- `/opt/rocm` – installed ROCm files, with `.info/build-info.json`
+- `~/.cache/aibenchy/` – downloads, temp extracts
+- `~/.config/aibenchy/config.json` – persisted CLI configuration
+- `~/.config/aibenchy/benchmark-results/*.json` – benchmark result snapshots
 
-### Get Help
-```bash
-aibenchy --help
-```
+---
 
-## 📋 Your System
-
-Based on detection:
-- **Platform**: Linux (CachyOS Deckify)
-- **GPU**: AMD gfx1151 (Steam Deck or similar)
-- **Compatible ROCm**: Versions 6.4.0 - 7.10.0
-- **Available Builds**: 164 compatible packages
-
-## 🎯 Recommended Next Steps
-
-1. **Test the CLI**:
-   ```bash
-   aibenchy install
-   ```
-   Note: This will prompt you through the entire process. You can cancel at any point!
-
-2. **After Installation**:
-   - Add ROCm to your PATH (the installer will show you how)
-   - Test with: `rocminfo`
-   - Verify GPU is detected
-
-3. **Install PyTorch** (next phase):
-   - Install PyTorch with ROCm support
-   - Verify GPU acceleration works
-   - Benchmark performance
-
-## 📦 Package Structure
-
-```
-aibenchy/
-├── bin/
-│   └── aibenchy.js          # Main CLI entry point
-├── src/
-│   ├── cli.js               # Interactive installation workflow
-│   ├── installer.js         # Download & install functions
-│   ├── rocm-parser.js       # Parse ROCm artifacts from S3
-│   ├── system-detect.js     # GPU & platform detection
-│   ├── test-parser.js       # Test ROCm parser
-│   └── detect-and-list.js   # Detailed system detection
-├── package.json
-├── README.md                # Main documentation
-└── INSTALLATION.md          # Detailed walkthrough
-```
-
-## 🔧 Key Features
-
-- ✅ Auto-detect AMD GPU (gfx1151 detected!)
-- ✅ Filter 1,240+ builds to 164 compatible
-- ✅ Interactive prompts for easy selection
-- ✅ Progress bars for downloads
-- ✅ Automatic backup of existing installations
-- ✅ Sudo handling for `/opt/rocm`
-- ✅ Environment setup instructions
-- ✅ Installation verification
-
-## 🎨 User Experience
-
-The workflow is designed to be:
-1. **Simple**: Just type `aibenchy install`
-2. **Guided**: Interactive prompts at every step
-3. **Safe**: Backups, confirmations, verification
-4. **Informative**: Shows compatible versions, file sizes, build dates
-5. **Fast**: Caches downloads for reuse
-
-## 📝 Files Created
-
-- `package.json` - NPM configuration
-- `bin/aibenchy.js` - CLI entry point
-- `src/cli.js` - Interactive installer
-- `src/installer.js` - Install/download logic
-- `src/rocm-parser.js` - Parse S3 index
-- `src/system-detect.js` - GPU detection
-- `README.md` - Documentation
-- `INSTALLATION.md` - Walkthrough
-- `SUMMARY.md` - This file!
-
-## 🚀 Try It Now!
-
-```bash
-aibenchy install
-```
-
-Enjoy your automated ROCm installer! 🎉
+If you want this summary to include additional internal helpers or tests, say the word and I’ll add them.
