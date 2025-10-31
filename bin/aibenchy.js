@@ -15,7 +15,7 @@ program
   .version('1.0.0');
 
 program
-  .command('install')
+  .command('rocm')
   .description('Install ROCm with interactive prompts')
   .action(async () => {
     try {
