@@ -323,26 +323,34 @@ async function promptPyTorchInstallation() {
         });
       }
       
-      versionChoices.unshift({
-        name: 'Latest (recommended)',
-        value: 'latest'
-      });
-      
       const { selectedFlashAttnVersion } = await inquirer.prompt([
         {
           type: 'list',
           name: 'selectedFlashAttnVersion',
           message: 'Select flash-attn version:',
           choices: versionChoices,
-          default: 'latest',
+          default: versionChoices[0].value,
           loop: false
         }
       ]);
       
       flashAttnVersion = selectedFlashAttnVersion;
     } else {
-      console.log('⚠️  Could not fetch flash-attn versions, will use latest');
-      flashAttnVersion = 'latest';
+      console.log('⚠️  Could not fetch flash-attn versions');
+      const { continueWithoutVersion } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'continueWithoutVersion',
+          message: 'Install latest available version anyway?',
+          default: false
+        }
+      ]);
+      
+      if (continueWithoutVersion) {
+        flashAttnVersion = 'latest';
+      } else {
+        flashAttnVersion = null;
+      }
     }
   }
   
@@ -358,7 +366,7 @@ async function promptPyTorchInstallation() {
   packagesToInstall.forEach(pkg => {
     console.log(`  • ${pkg.name} ${pkg.version}`);
   });
-  if (installFlashAttn) {
+  if (installFlashAttn && flashAttnVersion) {
     console.log(`  • flash-attn ${flashAttnVersion === 'latest' ? '(latest)' : flashAttnVersion}`);
   }
   
