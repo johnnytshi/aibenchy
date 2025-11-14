@@ -367,7 +367,8 @@ async function promptBenchmark() {
       choices: [
         { name: 'Basic PyTorch check (quick)', value: 'basic' },
         { name: 'Matrix multiplication benchmark', value: 'matrix' },
-        { name: 'Flash Attention benchmark', value: 'flash' },
+        { name: 'Flash Attention benchmark (simple)', value: 'flash' },
+        { name: 'Flash Attention comprehensive (all implementations)', value: 'flash_comprehensive' },
         { name: 'Full benchmark suite (all tests)', value: 'full' },
         { name: 'View past results', value: 'results' },
         { name: 'Cancel', value: 'cancel' }
@@ -387,6 +388,8 @@ async function promptBenchmark() {
   }
   
   let script;
+  let useExternalScript = false;
+  
   switch (benchmarkType) {
     case 'basic':
       script = BASIC_CHECK;
@@ -396,6 +399,10 @@ async function promptBenchmark() {
       break;
     case 'flash':
       script = BASIC_CHECK + FLASH_ATTENTION_BENCHMARK;
+      break;
+    case 'flash_comprehensive':
+      // Use external comprehensive benchmark script
+      useExternalScript = true;
       break;
     case 'full':
       script = FULL_BENCHMARK;
@@ -409,7 +416,29 @@ async function promptBenchmark() {
   console.log('\n📊 Collecting system metadata...');
   const metadata = collectSystemMetadata();
   
-  const result = await runBenchmark(config.projectPath, script);
+  let result;
+  
+  if (useExternalScript) {
+    // Run the comprehensive benchmark script directly
+    const comprehensiveScriptPath = path.join(__dirname, 'flash-attention-benchmark.py');
+    if (!fs.existsSync(comprehensiveScriptPath)) {
+      console.error('❌ Comprehensive benchmark script not found:', comprehensiveScriptPath);
+      process.exit(1);
+    }
+    
+    try {
+      const output = execSync(`uv run python ${comprehensiveScriptPath}`, {
+        cwd: config.projectPath,
+        encoding: 'utf8',
+        stdio: 'pipe'
+      });
+      result = { success: true, output };
+    } catch (error) {
+      result = { success: false, error: error.message, output: error.stdout || '' };
+    }
+  } else {
+    result = await runBenchmark(config.projectPath, script);
+  }
   
   if (result.success) {
     console.log(result.output);
@@ -515,6 +544,9 @@ function saveResults(benchmarkType, output, metadata) {
     if (benchmarkType === 'flash' || benchmarkType === 'full') {
       result.parsed = { ...result.parsed, ...parseFlashResults(output) };
     }
+    if (benchmarkType === 'flash_comprehensive') {
+      result.parsed = parseComprehensiveFlashResults(output);
+    }
 
     fs.writeFileSync(filepath, JSON.stringify(result, null, 2));
     console.log(`\n💾 Results saved to: ${filepath}`);
@@ -592,6 +624,79 @@ function parseFlashResults(output) {
     if (throughputMatch) {
       results.flashAttention.tokensPerSec = parseFloat(throughputMatch[1]);
     }
+  }
+  
+  return results;
+}
+
+function parseComprehensiveFlashResults(output) {
+  const results = { comprehensiveFlashAttention: [] };
+  const lines = output.split('\n');
+  
+  let currentConfig = 'Unknown';
+  let currentScenario = 'Unknown';
+  let currentImpl = 'Unknown';
+
+  for (const line of lines) {
+    // Capture the current configuration
+    let configMatch = line.match(/^Configuration: (.*)/);
+    if (configMatch) {
+      currentConfig = configMatch[1].trim();
+      currentScenario = currentConfig.toLowerCase().includes('prefill') ? 'prefill' : 'generation';
+      continue;
+    }
+
+    // Capture the implementation being benchmarked
+    let implMatch = line.match(/^Benchmarking (.*)\.\.\./);
+    if (implMatch) {
+      currentImpl = implMatch[1].trim();
+      continue;
+    }
+
+    // Capture the successful result for the current implementation
+    const successMatch = line.match(/✅\s+([\d.]+)\s+ms\s+\|\s+([\d.]+)\s+tokens\/sec\s+\|\s+([\d.]+)\s+GB/);
+    if (successMatch) {
+      results.comprehensiveFlashAttention.push({
+        implementation: currentImpl,
+        config: currentConfig,
+        scenario: currentScenario,
+        timeMs: parseFloat(successMatch[1]),
+        tokensPerSec: parseFloat(successMatch[2]),
+        memoryGb: parseFloat(successMatch[3]),
+        success: true,
+      });
+      continue;
+    }
+
+    // Capture the failed result for the current implementation
+    const failMatch = line.match(/⚠️\s+(.*) failed: (.*)/);
+    if (failMatch && failMatch[1].trim() === currentImpl) {
+      results.comprehensiveFlashAttention.push({
+        implementation: currentImpl,
+        config: currentConfig,
+        scenario: currentScenario,
+        success: false,
+        error: failMatch[2].trim(),
+      });
+    }
+  }
+  
+  // Parse winner summary
+  // Format: "🏆 Best for Prefill: Flash Attention 2 (avg 12.34 ms)"
+  const prefillWinner = output.match(/🏆 Best for Prefill:\s+([^(]+)\s+\(avg\s+([\d.]+)\s+ms\)/);
+  if (prefillWinner) {
+    results.prefillWinner = {
+      implementation: prefillWinner[1].trim(),
+      avgTimeMs: parseFloat(prefillWinner[2])
+    };
+  }
+  
+  const generationWinner = output.match(/🏆 Best for Generation:\s+([^(]+)\s+\(avg\s+([\d.]+)\s+ms\)/);
+  if (generationWinner) {
+    results.generationWinner = {
+      implementation: generationWinner[1].trim(),
+      avgTimeMs: parseFloat(generationWinner[2])
+    };
   }
   
   return results;

@@ -152,7 +152,7 @@ Top-level CLI: `bin/aibenchy.js`
    - Interactive selector to view previously saved results.
    - Output: console display; reads from `~/.config/aibenchy/benchmark-results/`.
 - `promptBenchmark()`
-   - Interactive runner for: basic torch env check, matrix-mult benchmark (BF16), Flash Attention benchmark, or full suite. Saves structured results.
+   - Interactive runner for: basic torch env check, matrix-mult benchmark (BF16), Flash Attention benchmark (simple), or the comprehensive Flash Attention benchmark. Saves structured results.
    - Output: writes JSON result files to `~/.config/aibenchy/benchmark-results/`.
 - `collectSystemMetadata()`
    - Captures OS, CPU, GPU, ROCm build info and installed package versions from config.
@@ -166,11 +166,15 @@ Top-level CLI: `bin/aibenchy.js`
 - `parseFlashResults(output)`
    - Parses Flash Attention time and tokens/sec.
    - Output: `{ flashAttention: { timeMs, tokensPerSec } }`.
+- `parseComprehensiveFlashResults(output)`
+  - Parses the detailed output of the comprehensive Flash Attention benchmark, associating results with specific implementations and configurations.
+  - Output: `{ comprehensiveFlashAttention: [...] }`.
 
-### `scripts/reprocess-results.js`
-- Script to re-parse older result files and add missing `m/n/k` fields.
-- Functions: `parseMatrixResults()`, `parseFlashResults()` (same intent as in `src/benchmark.js`).
-- Output: updates files in `~/.config/aibenchy/benchmark-results/` in-place.
+### `src/flash-attention-benchmark.py`
+- A standalone Python script for running a comprehensive benchmark across multiple attention implementations.
+- Implementations tested: Flash Attention 2, Triton, xFormers, PyTorch SDPA, and `torch.compile` versions.
+- Scenarios: "Prefill" (long context) and "Token Generation" (incremental with KV cache).
+- Output: Detailed console logs with performance metrics (ms, tokens/sec, memory) and a summary of the best-performing implementation for each scenario. This output is captured and parsed by `benchmark.js`.
 
 ### `scripts/serve-benchmark-viewer.js`
 - Serves a static web page to visualize benchmark results.
