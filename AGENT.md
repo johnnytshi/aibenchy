@@ -13,7 +13,7 @@ This document summarizes what’s implemented in the repo, and lists the key fun
 - Web-based benchmark result viewer.
 
 Top-level CLI: `bin/aibenchy.js`
-- Commands: `aibenchy rocm`, `aibenchy python`, `aibenchy detect`, `aibenchy config`, `aibenchy bench`, `aibenchy view_benchmark`
+- Commands: `aibenchy rocm`, `aibenchy python`, `aibenchy detect`, `aibenchy config`, `aibenchy bench`, `aibenchy view`
 
 ## Data and output locations
 
@@ -214,7 +214,7 @@ aibenchy rocm        # guided ROCm installer
 aibenchy python      # guided PyTorch + Flash-Attn installer
 aibenchy bench       # run benchmarks and save results
 aibenchy config      # print current config
-aibenchy view_benchmark # view benchmark results
+aibenchy view        # view benchmark results
 ```
 
 3) Where outputs go

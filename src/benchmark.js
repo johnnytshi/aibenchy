@@ -224,10 +224,9 @@ print("=" * 60)
 const FULL_BENCHMARK = `
 ${BASIC_CHECK}
 ${MATRIX_BENCHMARK}
-${FLASH_ATTENTION_BENCHMARK}
 
 print("\\n" + "=" * 60)
-print("✅ All benchmarks completed successfully!")
+print("✅ Basic benchmarks completed successfully!")
 print("=" * 60)
 `;
 
@@ -389,6 +388,7 @@ async function promptBenchmark() {
   
   let script;
   let useExternalScript = false;
+  let runComprehensiveAfter = false;
   
   switch (benchmarkType) {
     case 'basic':
@@ -406,6 +406,7 @@ async function promptBenchmark() {
       break;
     case 'full':
       script = FULL_BENCHMARK;
+      runComprehensiveAfter = true;
       break;
   }
   
@@ -447,6 +448,34 @@ async function promptBenchmark() {
     
     // Save results with metadata
     saveResults(benchmarkType, result.output, metadata);
+    
+    // If this is the full suite, now run the comprehensive flash attention benchmark
+    if (runComprehensiveAfter) {
+      console.log('\n🚀 Running comprehensive Flash Attention benchmark...\n');
+      console.log('─'.repeat(60));
+      
+      const comprehensiveScriptPath = path.join(__dirname, 'flash-attention-benchmark.py');
+      if (!fs.existsSync(comprehensiveScriptPath)) {
+        console.error('❌ Comprehensive benchmark script not found:', comprehensiveScriptPath);
+      } else {
+        try {
+          const comprehensiveOutput = execSync(`uv run python ${comprehensiveScriptPath}`, {
+            cwd: config.projectPath,
+            encoding: 'utf8',
+            stdio: 'pipe'
+          });
+          console.log(comprehensiveOutput);
+          console.log('─'.repeat(60));
+          console.log('\n✅ Comprehensive benchmark completed successfully!\n');
+          saveResults('flash_comprehensive', comprehensiveOutput, metadata);
+        } catch (error) {
+          console.error('\n❌ Comprehensive benchmark failed:', error.message);
+          if (error.stdout) {
+            console.log(error.stdout);
+          }
+        }
+      }
+    }
   } else {
     console.log(result.output);
     console.error('\n❌ Benchmark failed:', result.error);

@@ -26,7 +26,7 @@ aibenchy python
 aibenchy bench
 
 # 6) View benchmark results
-aibenchy view_benchmark
+aibenchy view
 ```
 
 That’s it. The tool guides you with friendly prompts and sensible defaults.
@@ -63,7 +63,7 @@ Tip: If you use fish shell, the tool prints fish-friendly env exports as well.
 - `aibenchy python` — Guided PyTorch/Flash-Attn install for AMD ROCm nightlies
 - `aibenchy bench` — Run basic GPU checks and small benchmarks; saves JSON
 - `aibenchy config` — Print current config
-- `aibenchy view_benchmark` — Starts a web server to view benchmark results.
+- `aibenchy view` — Starts a web server to view benchmark results.
 
 ## Friendly notes
 

@@ -90,20 +90,10 @@ program
   });
 
 program
-  .command('view_benchmark')
-  .description('Starts a web server to view benchmark results')
+  .command('view')
+  .description('View benchmark results in a web interface')
   .action(() => {
-    const serverPath = path.join(__dirname, '..', 'scripts', 'serve-benchmark-viewer.js');
-    const child = spawn('node', [serverPath], { stdio: 'inherit' });
-
-    child.on('error', (err) => {
-      console.error('Failed to start benchmark viewer server:', err);
-    });
-
-    child.on('exit', (code, signal) => {
-      if (code) console.log(`Benchmark viewer server exited with code ${code}`);
-      if (signal) console.log(`Benchmark viewer server exited with signal ${signal}`);
-    });
+    serveBenchmarkViewer();
   });
 
 program.parse();
