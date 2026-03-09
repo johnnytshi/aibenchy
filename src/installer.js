@@ -105,7 +105,7 @@ async function installRocm(tarPath, installDir = '/opt/rocm', buildInfo = null) 
   
   // Create temporary extraction directory
   // Use home directory instead of /tmp to avoid tmpfs space issues
-  const tempDir = path.join(process.env.HOME, '.cache', 'aibenchy', `rocm-extract-${Date.now()}`);
+  const tempDir = path.join(process.env.HOME, '.cache', 'rockit', `rocm-extract-${Date.now()}`);
   fs.mkdirSync(tempDir, { recursive: true });
   
   try {
